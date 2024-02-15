@@ -60,6 +60,41 @@ server:
     # Set the working directory for the program.
     directory: "/opt/unbound/etc/unbound"
 
+    # If enabled, Unbound will respond with Extended DNS Error codes (RFC 8914).
+    # These EDEs attach informative error messages to a response for various
+    # errors.
+    # When the val-log-level: option is also set to 2, responses with Extended
+    # DNS Errors concerning DNSSEC failures that are not served from cache, will
+    # also contain a descriptive text message about the reason for the failure.
+    ede: yes
+
+    # If enabled, Unbound will attach an Extended DNS Error (RFC 8914)
+    # Code 3 - Stale Answer as EDNS0 option to the expired response.
+    # This will not attach the EDE code without setting ede: yes as well.
+    ede-serve-expired: yes
+
+    # Enable or disable whether IPv4 queries are answered or issued.
+    # Default: yes
+    do-ip4: yes
+
+    # Enable or disable whether IPv6 queries are answered or issued.
+    # If disabled, queries are not answered on IPv6, and queries are not sent
+    # on IPv6 to the internet nameservers. With this option you can disable the
+    # IPv6 transport for sending DNS traffic, it does not impact the contents
+    # of the DNS traffic, which may have IPv4 (A) and IPv6 (AAAA) addresses in
+    # it.
+    # Default: yes
+    # May be set to yes if you have IPv6 connectivity
+    do-ip6: yes
+
+    # Enable or disable whether TCP queries are answered or issued.
+    # Default: yes
+    do-tcp: yes
+
+    # Enable or disable whether UDP queries are answered or issued.
+    # Default: yes
+    do-udp: yes
+
     # RFC 6891. Number  of bytes size to advertise as the EDNS reassembly buffer
     # size. This is the value put into  datagrams over UDP towards peers.
     # The actual buffer size is determined by msg-buffer-size (both for TCP and
@@ -74,6 +109,16 @@ server:
     # Listen to for queries from clients and answer from this network interface
     # and port.
     interface: 0.0.0.0@53
+
+    # interface: ::0
+    # port: 53
+
+    # If enabled, prefer IPv6 transport for sending DNS queries to internet
+    # nameservers.
+    # Default: yes
+    # You want to leave this to no unless you have *native* IPv6. With 6to4 and
+    # Terredo tunnels your web browser should favor IPv4 for the same reasons
+    prefer-ip6: no
 
     # Rotates RRSet order in response (the pseudo-random number is taken from
     # the query ID, for speed and thread safety).
@@ -99,9 +144,9 @@ server:
     log-servfail: no
 
     # If you want to log to a file, use:
-    # logfile: /opt/unbound/etc/unbound/unbound.log
+    logfile: /opt/unbound/etc/unbound/unbound.log
     # Set log location (using /dev/null further limits logging)
-    logfile: /dev/null
+    # logfile: /dev/null
 
     # Set logging level
     # Level 0: No verbosity, only errors.
@@ -172,6 +217,12 @@ server:
     # advertised in the DS record.
     harden-algo-downgrade: yes
 
+    # Harden against unknown records in the authority section and additional
+    # section. If no, such records are copied from the upstream and presented
+    # to the client together with the answer. If yes, it could hamper future
+    # protocol developments that want to add records.
+    harden-unknown-additional: yes
+
     # RFC 8020. returns nxdomain to queries for a name below another name that
     # is already known to be nxdomain.
     harden-below-nxdomain: yes
@@ -197,7 +248,7 @@ server:
     # Ignore very small EDNS buffer sizes from queries.
     harden-short-bufsize: yes
 
-    # If enabled the HTTP header User-Agent is not set. Use with  caution
+    # If enabled the HTTP header User-Agent is not set. Use with caution
     # as some webserver configurations may reject HTTP requests lacking
     # this header. If needed, it is better to explicitly set the
     # the http-user-agent.
@@ -210,8 +261,8 @@ server:
     hide-version: yes
 
     # Set the HTTP User-Agent header for outgoing HTTP requests. If
-    # set to "", the default, then the package name  and  version  are
-    #  used.
+    # set to "", the default, then the package name and version are
+    # used.
     http-user-agent: "DNS"
 
     # Report this identity rather than the hostname of the server.
@@ -339,10 +390,31 @@ server:
     # actual resolution answer ends up in the cache later on.
     serve-expired: yes
 
+    # UDP queries that have waited in the socket buffer for a long time can be
+    # dropped. The time is set in seconds, 3 could be a good value to ignore old
+    # queries that likely the client does not need a reply for any more. This 
+    # could happen if the host has not been able to service the queries for a 
+    # while, i.e. Unbound is not running, and then is enabled again. It uses 
+    # timestamp socket options.
+    sock-queue-timeout: 3
+
     # Open dedicated listening sockets for incoming queries for each thread and
     # try to set the SO_REUSEPORT socket option on each socket. May distribute
     # incoming queries to threads more evenly.
     so-reuseport: yes
+
+    # If not 0, then set the SO_SNDBUF socket option to get more buffer space
+    # on UDP port 53 outgoing queries.
+    # Specify the number of bytes to ask for, try “4m” on a very busy server.
+    # The OS caps it at a maximum, on linux Unbound needs root permission to 
+    # bypass the limit, or the admin can use sysctl net.core.wmem_max.
+    # For example: sysctl -w net.core.wmem_max=4194304
+    # To persist reboots, edit /etc/sysctl.conf to include:
+    # net.core.wmem_max=4194304
+    # Default: 0 (use system value)
+    # Larger socket buffer. OS may need config.
+    # Ensure kernel buffer is large enough to not lose messages in traffic spikes
+    # so-sndbuf: 4m
 
     ###########################################################################
     # LOCAL ZONE
@@ -355,13 +427,8 @@ server:
     ###########################################################################
     # FORWARD ZONE
     ###########################################################################
-    
+    # No forward zone set up so that unbound operate as recursive server
     # include: /opt/unbound/etc/unbound/forward-records.conf
-
-    ###########################################################################
-    # WILDCARD INCLUDE
-    ###########################################################################
-    # include: "/opt/unbound/etc/unbound/*.conf"
 
 remote-control:
     control-enable: no
