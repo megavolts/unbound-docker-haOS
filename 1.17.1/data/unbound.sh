@@ -355,13 +355,13 @@ server:
     ###########################################################################
     # FORWARD ZONE
     ###########################################################################
-
-    include: /opt/unbound/etc/unbound/forward-records.conf
+    
+    # include: /opt/unbound/etc/unbound/forward-records.conf
 
     ###########################################################################
     # WILDCARD INCLUDE
     ###########################################################################
-    #include: "/opt/unbound/etc/unbound/*.conf"
+    # include: "/opt/unbound/etc/unbound/*.conf"
 
 remote-control:
     control-enable: no
